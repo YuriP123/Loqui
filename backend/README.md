@@ -1,6 +1,4 @@
-Here's the complete README.md content for you to copy and paste:
-
-```markdown
+````markdown
 # Loqui AI Voice Clone Studio - Backend
 
 FastAPI backend for Loqui AI Voice Clone Studio application.
@@ -8,29 +6,35 @@ FastAPI backend for Loqui AI Voice Clone Studio application.
 ## Setup
 
 ### Prerequisites
+
 - Python 3.9+
 - PostgreSQL 15+
 
 ### Installation
 
 1. Create virtual environment:
+
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
+````
 
 2. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
 3. Setup database:
+
 ```bash
 # Create database and user in PostgreSQL
 psql postgres
 ```
 
 Then in PostgreSQL prompt:
+
 ```sql
 CREATE DATABASE voiceclone_db;
 CREATE USER voiceclone_user WITH PASSWORD 'voiceclone_pass';
@@ -41,11 +45,13 @@ GRANT ALL ON SCHEMA public TO voiceclone_user;
 ```
 
 4. Run migrations:
+
 ```bash
 alembic upgrade head
 ```
 
 5. Create .env file (copy from .env.example)
+
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
@@ -91,46 +97,55 @@ backend/
 ## Database Models
 
 ### Users
+
 - User authentication and profile information
 - Relationships to audio samples and generated audio
 
 ### Audio Samples
+
 - Stores recorded or uploaded audio samples
 - Used as source for voice cloning
 
 ### Generated Audio
+
 - Stores AI-generated voice cloned audio
 - Tracks generation status and metadata
 
 ### User Sessions
+
 - Manages user authentication sessions
 - JWT token management
 
 ### Generation Queue
+
 - Manages background processing queue
 - Tracks job status and retries
 
 ## API Endpoints (Planned)
 
 ### Authentication
+
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
 - `POST /api/auth/logout` - Logout user
 - `GET /api/auth/me` - Get current user
 
 ### Audio Samples
+
 - `POST /api/samples/upload` - Upload audio file
 - `POST /api/samples/record` - Save recorded audio
 - `GET /api/samples/` - List user's samples
 - `DELETE /api/samples/{sample_id}` - Delete sample
 
 ### Generation
+
 - `POST /api/generation/create` - Create generation job
 - `GET /api/generation/status/{audio_id}` - Check status
 - `GET /api/generation/{audio_id}` - Get generated audio
 - `DELETE /api/generation/{audio_id}` - Delete generated audio
 
 ### Library
+
 - `GET /api/library/all` - Get all audio (samples + generated)
 - `GET /api/library/samples` - Get only samples
 - `GET /api/library/generated` - Get only generated audio
@@ -190,6 +205,3 @@ CPSC 449 - Fall 2025 - Web Back-End Engineering
 ## License
 
 This project is for educational purposes.
-```
-
-Just copy everything above (including the markdown formatting) and paste it into your `README.md` file!
