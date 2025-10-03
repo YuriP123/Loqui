@@ -54,7 +54,7 @@ alembic upgrade head
 
 ```bash
 cp .env.example .env
-# Edit .env with your configuration
+# Edit .env with configuration
 ```
 
 ### Running
