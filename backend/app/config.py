@@ -3,7 +3,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # App
-    APP_NAME: str = "Loqui AI Voice Clone Studio"
+    APP_NAME: str = "AI Voice Clone Studio API"
     DEBUG: bool = True
     
     # Database
