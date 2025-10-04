@@ -10,6 +10,7 @@ alembic==1.12.1
 # Data validation
 pydantic==2.5.0
 pydantic-settings==2.1.0
+email-validator==2.3.0
 
 # File handling
 python-multipart==0.0.6
@@ -18,6 +19,7 @@ aiofiles==23.2.1
 # Authentication
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
 
 # Environment variables
 python-dotenv==1.0.0
@@ -27,3 +29,8 @@ requests==2.31.0
 
 # WebSockets
 websockets==12.0
+
+# Testing
+pytest==7.4.3
+pytest-cov==4.1.0
+httpx==0.27.2

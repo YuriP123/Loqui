@@ -1,207 +1,256 @@
-````markdown
-# Loqui AI Voice Clone Studio - Backend
+# AI Voice Clone Studio - Backend
 
-FastAPI backend for Loqui AI Voice Clone Studio application.
+FastAPI backend for AI Voice Clone Studio application with PostgreSQL database.
 
-## Setup
+## 🚀 Features
 
-### Prerequisites
+- ✅ User Authentication (JWT)
+- ✅ Audio Sample Upload (recorded/uploaded)
+- ✅ Voice Generation Request System
+- ✅ Library Management (unified view of samples + generated)
+- ✅ File Storage System
+- ✅ RESTful API with auto-generated documentation
+
+## 📋 Prerequisites
 
 - Python 3.9+
 - PostgreSQL 15+
+- Virtual environment (recommended)
 
-### Installation
+## 🛠️ Installation
 
-1. Create virtual environment:
+### 1. Clone and Setup
 
-```bash
+git checkout backend
+cd backend 2. Create Virtual Environment
 python3 -m venv venv
-source venv/bin/activate
-```
-````
+source venv/bin/activate # On Windows: venv\Scripts\activate 3. Install Dependencies
+pip install -r requirements.txt 4. Setup PostgreSQL
 
-2. Install dependencies:
+# Create database
 
-```bash
-pip install -r requirements.txt
-```
+createdb voiceclone_db
 
-3. Setup database:
+# Or using psql
 
-```bash
-# Create database and user in PostgreSQL
 psql postgres
-```
-
-Then in PostgreSQL prompt:
-
-```sql
 CREATE DATABASE voiceclone_db;
 CREATE USER voiceclone_user WITH PASSWORD 'voiceclone_pass';
 GRANT ALL PRIVILEGES ON DATABASE voiceclone_db TO voiceclone_user;
-\c voiceclone_db
-GRANT ALL ON SCHEMA public TO voiceclone_user;
-\q
-```
+\q 5. Configure Environment
 
-4. Run migrations:
+# Copy example env file
 
-```bash
-alembic upgrade head
-```
-
-5. Create .env file (copy from .env.example)
-
-```bash
 cp .env.example .env
-# Edit .env with configuration
-```
 
-### Running
+# Edit .env with your settings
 
-```bash
-uvicorn app.main:app --reload
-```
+nano .env 6. Run Migrations
+alembic upgrade head
+🏃 Running the Application
+Development Server
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+The API will be available at:
 
-API will be available at: http://localhost:8000
+API: http://localhost:8000
+Swagger Docs: http://localhost:8000/docs
+ReDoc: http://localhost:8000/redoc
 
-API Documentation: http://localhost:8000/docs
+📚 API Documentation
+Quick Start
 
-## Project Structure
+1. Register User
+   curl -X POST http://localhost:8000/api/auth/register \
+    -H "Content-Type: application/json" \
+    -d '{
+   "username": "testuser",
+   "email": "test@example.com",
+   "password": "testpass123"
+   }'
+2. Login
+   curl -X POST http://localhost:8000/api/auth/login \
+    -d "username=testuser&password=testpass123"
+3. Upload Audio Sample
+   curl -X POST http://localhost:8000/api/samples/upload \
+    -H "Authorization: Bearer YOUR_TOKEN" \
+    -F "sample_name=My Voice" \
+    -F "upload_type=uploaded" \
+    -F "file=@audio.wav"
+4. Create Generation
+   curl -X POST http://localhost:8000/api/generation/create \
+    -H "Authorization: Bearer YOUR_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+   "sample_id": 1,
+   "model_name": "My Voice Model",
+   "script_text": "Hello, this is a test."
+   }'
+   For complete API documentation, see API_DOCUMENTATION.md
+   🧪 Testing
+   Run All Tests
+   pytest tests/ -v
+   Run with Coverage
+   pytest tests/ --cov=app --cov-report=html
+   Run Specific Test File
+   pytest tests/api/test_auth.py -v
+   📁 Project Structure
+   backend/
+   ├── app/
+   │ ├── api/ # API routes
+   │ │ ├── auth.py # Authentication endpoints
+   │ │ ├── samples.py # Audio sample endpoints
+   │ │ ├── generation.py # Generation endpoints
+   │ │ └── library.py # Library endpoints
+   │ ├── models/ # SQLAlchemy models
+   │ │ ├── user.py
+   │ │ ├── audio_sample.py
+   │ │ ├── generated_audio.py
+   │ │ ├── user_session.py
+   │ │ └── generation_queue.py
+   │ ├── schemas/ # Pydantic schemas
+   │ │ ├── user.py
+   │ │ ├── audio.py
+   │ │ ├── generation.py
+   │ │ └── library.py
+   │ ├── services/ # Business logic
+   │ │ ├── auth_service.py
+   │ │ ├── audio_service.py
+   │ │ ├── generation_service.py
+   │ │ └── library_service.py
+   │ ├── utils/ # Utilities
+   │ │ ├── security.py # Password & JWT handling
+   │ │ ├── file_handler.py # File operations
+   │ │ ├── validators.py # Input validation
+   │ │ ├── dependencies.py # FastAPI dependencies
+   │ │ └── exceptions.py # Exception handlers
+   │ ├── storage/ # File storage
+   │ │ ├── samples/ # Audio samples
+   │ │ └── generated/ # Generated audio
+   │ ├── config.py # Configuration
+   │ ├── database.py # Database setup
+   │ └── main.py # FastAPI application
+   ├── alembic/ # Database migrations
+   ├── tests/ # Test suite
+   ├── scripts/ # Utility scripts
+   ├── requirements.txt # Python dependencies
+   ├── .env # Environment variables
+   └── README.md # This file
+   🗃️ Database Schema
+   Tables
 
-```
-backend/
-├── app/
-│   ├── api/          # API routes
-│   ├── models/       # Database models
-│   ├── schemas/      # Pydantic schemas
-│   ├── services/     # Business logic
-│   ├── utils/        # Utilities
-│   └── storage/      # File storage
-│       ├── samples/  # Audio samples
-│       └── generated/# Generated audio files
-├── alembic/          # Database migrations
-├── tests/            # Tests
-├── requirements.txt  # Dependencies
-├── .env              # Environment variables (not in git)
-└── .env.example      # Example environment variables
-```
+users - User accounts
+audio_samples - Uploaded/recorded audio samples
+generated_audio - AI-generated voice audio
+user_sessions - Authentication sessions
+generation_queue - Processing queue for generations
 
-## Development Progress
+Relationships
 
-- [x] Week 1: Project setup, database models, migrations
-- [ ] Week 2-3: Authentication & CRUD endpoints
-- [ ] Week 4-5: AI integration
-- [ ] Week 6: Testing & optimization
+User → Audio Samples (1:N)
+User → Generated Audio (1:N)
+Audio Sample → Generated Audio (1:N)
+Generated Audio → Generation Queue (1:1)
 
-## Database Models
+🔐 Environment Variables
+env# Database
+DATABASE_URL=postgresql://user:pass@localhost:5432/voiceclone_db
 
-### Users
+# JWT
 
-- User authentication and profile information
-- Relationships to audio samples and generated audio
+SECRET_KEY=your-secret-key-min-32-characters
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 
-### Audio Samples
+# File Storage
 
-- Stores recorded or uploaded audio samples
-- Used as source for voice cloning
+UPLOAD_DIR=./app/storage
+MAX_FILE_SIZE=10485760 # 10MB
 
-### Generated Audio
+# CORS
 
-- Stores AI-generated voice cloned audio
-- Tracks generation status and metadata
+FRONTEND_URL=http://localhost:3000
 
-### User Sessions
+# AI Model (configure when ready)
 
-- Manages user authentication sessions
-- JWT token management
+COLAB_NOTEBOOK_URL=
+COLAB_API_KEY=
+🐛 Troubleshooting
+Database Connection Issues
 
-### Generation Queue
+# Check PostgreSQL is running
 
-- Manages background processing queue
-- Tracks job status and retries
+brew services list | grep postgresql
 
-## API Endpoints (Planned)
+# Restart PostgreSQL
 
-### Authentication
+brew services restart postgresql@15
 
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-- `POST /api/auth/logout` - Logout user
-- `GET /api/auth/me` - Get current user
+# Test connection
 
-### Audio Samples
+psql -U voiceclone_user -d voiceclone_db -h localhost
+Migration Issues
 
-- `POST /api/samples/upload` - Upload audio file
-- `POST /api/samples/record` - Save recorded audio
-- `GET /api/samples/` - List user's samples
-- `DELETE /api/samples/{sample_id}` - Delete sample
+# Reset migrations (DANGER: deletes all data)
 
-### Generation
-
-- `POST /api/generation/create` - Create generation job
-- `GET /api/generation/status/{audio_id}` - Check status
-- `GET /api/generation/{audio_id}` - Get generated audio
-- `DELETE /api/generation/{audio_id}` - Delete generated audio
-
-### Library
-
-- `GET /api/library/all` - Get all audio (samples + generated)
-- `GET /api/library/samples` - Get only samples
-- `GET /api/library/generated` - Get only generated audio
-- `GET /api/library/download/{file_id}` - Download file
-
-## Environment Variables
-
-See `.env.example` for all available configuration options:
-
-- `DATABASE_URL` - PostgreSQL connection string
-- `SECRET_KEY` - JWT secret key (min 32 characters)
-- `FRONTEND_URL` - Frontend URL for CORS
-- `UPLOAD_DIR` - Directory for file storage
-- `MAX_FILE_SIZE` - Maximum upload file size in bytes
-
-## Tech Stack
-
-- **Framework**: FastAPI 0.104.1
-- **Database**: PostgreSQL 15+ with SQLAlchemy 2.0
-- **Migrations**: Alembic
-- **Authentication**: JWT with python-jose
-- **Password Hashing**: bcrypt via passlib
-- **Validation**: Pydantic v2
-- **File Handling**: aiofiles for async file operations
-
-## Development Commands
-
-```bash
-# Run server with auto-reload
-uvicorn app.main:app --reload
+alembic downgrade base
+alembic upgrade head
 
 # Create new migration
+
 alembic revision --autogenerate -m "description"
+File Upload Issues
 
-# Apply migrations
-alembic upgrade head
+# Check storage permissions
 
-# Rollback migration
-alembic downgrade -1
+ls -la app/storage/
 
-# Check current migration
-alembic current
+# Fix permissions
 
-# Run tests (when implemented)
-pytest
-```
+chmod -R 755 app/storage/
+📝 Development Workflow
+Making Changes
 
-## Authors
+Create feature branch
 
-- Parsa Banaei
-- Yuri
+git checkout -b feature/my-feature
 
-## Course Information
+Make changes and test
 
-CPSC 449 - Fall 2025 - Web Back-End Engineering
+pytest tests/ -v
 
-## License
+Commit changes
 
+git add .
+git commit -m "feat: add new feature"
+
+Push to backend branch
+
+git push origin backend
+🚧 Roadmap
+Week 1 ✅
+
+Project setup
+Database models
+Basic FastAPI app
+
+Week 2-3 ✅
+
+Authentication system
+CRUD endpoints
+File upload/download
+Library management
+
+Week 4-5 (Next)
+
+AI model integration
+Background task processing
+WebSocket for real-time updates
+
+Week 6
+
+Testing & optimization
+Performance improvements
+Documentation
+
+📄 License
 This project is for educational purposes.
