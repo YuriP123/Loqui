@@ -170,10 +170,9 @@ MAX_FILE_SIZE=10485760 # 10MB
 
 FRONTEND_URL=http://localhost:3000
 
-# AI Model (configure when ready)
+# AI Model ()
 
-COLAB_NOTEBOOK_URL=
-COLAB_API_KEY=
+
 🐛 Troubleshooting
 Database Connection Issues
 

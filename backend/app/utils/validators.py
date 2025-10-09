@@ -3,8 +3,19 @@ from app.config import settings
 
 def validate_audio_file(file: UploadFile) -> bool:
     """Validate audio file format"""
+    # Check file extension as fallback (useful when MIME type is not detected)
+    if file.filename:
+        ext = file.filename.lower().split('.')[-1]
+        valid_extensions = ['wav', 'mp3', 'mpeg']
+        if ext in valid_extensions:
+            return True
+    
+    # Check MIME type
     if not file.content_type:
-        raise HTTPException(status_code=400, detail="Could not determine file type")
+        raise HTTPException(
+            status_code=400, 
+            detail="Could not determine file type. Please ensure file has .wav, .mp3, or .mpeg extension"
+        )
     
     if file.content_type not in settings.ALLOWED_AUDIO_FORMATS:
         raise HTTPException(
