@@ -44,16 +44,27 @@ export default function Recorder({
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="space-y-3">
       <button
         onClick={recording ? stop : start}
-        className={`rounded-md px-4 py-2 text-white ${
-          recording ? "bg-red-600 hover:bg-red-700" : "bg-primary hover:bg-primary/90"
+        className={`w-full rounded-md px-4 py-3 text-white font-medium transition-all duration-300 ${
+          recording 
+            ? "bg-red-600 hover:bg-red-700 animate-pulse" 
+            : "bg-primary hover:bg-primary/90"
         }`}
       >
-        {recording ? "Stop & Save Recording" : "Start Recording"}
+        {recording ? "⏹ Stop & Save Recording" : "🎙️ Start Recording"}
       </button>
-      {error && <span className="text-sm text-red-600">{error}</span>}
+      {recording && (
+        <p className="text-sm text-center text-muted-foreground animate-pulse transition-colors duration-500">
+          Recording in progress...
+        </p>
+      )}
+      {error && (
+        <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50/80 dark:bg-red-900/20 p-3">
+          <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+        </div>
+      )}
     </div>
   );
 }

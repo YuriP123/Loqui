@@ -1,20 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState, useEffect } from "react";
+import { Input, Button } from "@heroui/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import ParticleFloorLanding from "@/components/ParticleFloor";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useTheme } from "next-themes";
+import { ArrowLeft } from "lucide-react";
 
-export default function RegisterPage() {
+function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     try {
-      // TODO: Replace with real registration API call
       await new Promise((r) => setTimeout(r, 600));
       router.replace("/home");
     } finally {
@@ -22,59 +32,101 @@ export default function RegisterPage() {
     }
   }
 
+  const particleColor = mounted && theme === "dark" ? "white" : "black";
+  const backgroundColor = mounted && theme === "dark" ? "black" : "white";
+
   return (
-    <main className="min-h-screen flex items-center justify-center px-6 py-16">
-      <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">
-        <h1 className="text-2xl font-semibold">Create your account</h1>
-        <p className="text-muted-foreground mt-1">Start creating with Loqui</p>
+    <main className="relative min-h-screen flex items-center justify-center px-6 py-16">
+      <ParticleFloorLanding 
+        asBackground 
+        tiltDeg={45} 
+        yawDeg={20} 
+        color={particleColor} 
+        background={backgroundColor} 
+      />
+      
+      {/* Back Button */}
+      <button
+        onClick={() => router.push("/")}
+        className="fixed top-6 left-6 z-50 rounded-full p-3 border border-gray-200 dark:border-gray-800 bg-gray-100/90 dark:bg-gray-900/90 backdrop-blur-md shadow-lg hover:bg-gray-200/90 dark:hover:bg-gray-800/90 transition-all duration-300 hover:scale-110 group"
+        aria-label="Back to home"
+      >
+        <ArrowLeft className="h-5 w-5 transition-all duration-300 group-hover:-translate-x-0.5" />
+      </button>
+
+      {/* Theme Toggle Button */}
+      <div className="fixed top-6 right-6 z-50">
+        <ThemeToggle />
+      </div>
+
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-100/90 dark:bg-gray-900/90 backdrop-blur-md p-8 shadow-lg transition-all duration-500">
+        <h1 className="text-3xl font-bold transition-colors duration-500">Sign in</h1>
+        <p className="text-muted-foreground mt-2 transition-colors duration-500">Start creating with Loqui</p>
 
         {searchParams.get("created") && (
-          <div className="mt-4 rounded-md border bg-muted p-3 text-sm">
+          <div className="mt-4 rounded-lg border border-green-200 dark:border-green-800 bg-green-50/80 dark:bg-green-900/20 p-3 text-sm text-green-800 dark:text-green-200 transition-all duration-500">
             Account created. You can now sign in.
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div className="text-left">
-            <label className="block text-sm font-medium">Email</label>
-            <input
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+          <div className="text-left space-y-2">
+            <label className="block text-sm font-medium transition-colors duration-500">Email</label>
+            <Input
               type="email"
-              required
+              isRequired
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2"
               placeholder="you@example.com"
+              classNames={{
+                input: "bg-transparent transition-colors duration-500",
+                inputWrapper: "bg-gray-50/50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 transition-all duration-300",
+              }}
             />
           </div>
-          <div className="text-left">
-            <label className="block text-sm font-medium">Password</label>
-            <input
+          <div className="text-left space-y-2">
+            <label className="block text-sm font-medium transition-colors duration-500">Password</label>
+            <Input
               type="password"
-              required
+              isRequired
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2"
               placeholder="••••••••"
+              classNames={{
+                input: "bg-transparent transition-colors duration-500",
+                inputWrapper: "bg-gray-50/50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 transition-all duration-300",
+              }}
             />
           </div>
-          <div className="flex flex-row justify-around">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-auto rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          <div className="flex flex-col gap-3 pt-2">
+            <Button 
+              type="submit" 
+              isDisabled={loading} 
+              isLoading={loading} 
+              color="primary"
+              className="w-full transition-all duration-300"
             >
-              {loading ? "Signing in..." : "Sign In"}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push("/register")}
-              className="w-auto rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              Sign In
+            </Button>
+            <Button 
+              type="button" 
+              variant="bordered" 
+              onPress={() => router.push("/register")}
+              className="w-full border-gray-300 dark:border-gray-700 hover:bg-gray-200/50 dark:hover:bg-gray-800/50 transition-all duration-300"
             >
-              Register an account
-            </button>
+              Create an account
+            </Button>
           </div>
         </form>
       </div>
     </main>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen flex items-center justify-center px-6 py-16"><div className="text-sm text-muted-foreground">Loading…</div></main>}>
+      <SignInContent />
+    </Suspense>
   );
 }
