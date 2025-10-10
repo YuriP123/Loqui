@@ -1,1 +1,1 @@
-# CPSC449-Project
+# Loqui
