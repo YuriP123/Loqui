@@ -4,6 +4,7 @@ import {
   IconDotsVertical,
   IconLogout,
 } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -20,39 +21,30 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useAuth } from "@/contexts/AuthContext";
-import type { User as ApiUser } from "@/types/api";
 
 export function NavUser({
   user,
 }: {
-  user?: ApiUser | {
+  user: {
     name: string;
     email: string;
     avatar: string;
   };
 }) {
   const { isMobile } = useSidebar();
-  const { logout, user: authUser } = useAuth();
-  
-  // Use auth user if available, otherwise use prop user
-  const currentUser = authUser || user;
-  
-  // Get display name and email
-  const displayName = currentUser ? ('full_name' in currentUser ? currentUser.full_name || currentUser.username : currentUser.name) : "User";
-  const displayEmail = currentUser ? currentUser.email : "";
-  const displayAvatar = currentUser && 'avatar' in currentUser ? currentUser.avatar : "";
-  
-  // Get initials for fallback avatar
-  const initials = displayName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  const router = useRouter();
 
   function handleSignOut() {
-    logout();
+    try {
+      // Clear any local client state (placeholder for real auth sign-out)
+      if (typeof window !== "undefined") {
+        localStorage.clear();
+        // Optionally clear app cookies here if used for auth
+        // document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      }
+    } finally {
+      router.replace("/");
+    }
   }
 
   return (
@@ -65,13 +57,13 @@ export function NavUser({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg grayscale">
-                <AvatarImage src={displayAvatar} alt={displayName} />
-                <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+                <AvatarImage src={user.avatar} alt={user.name} />
+                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium text-white">{displayName}</span>
+                <span className="truncate font-medium text-white">{user.name}</span>
                 <span className="truncate text-white text-xs">
-                  {displayEmail}
+                  {user.email}
                 </span>
               </div>
               <IconDotsVertical className="ml-auto size-4" />
@@ -86,13 +78,13 @@ export function NavUser({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={displayAvatar} alt={displayName} />
-                  <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium text-black">{displayName}</span>
+                  <span className="truncate font-medium text-black">{user.name}</span>
                   <span className="text-muted-foreground truncate text-black text-xs">
-                    {displayEmail}
+                    {user.email}
                   </span>
                 </div>
               </div>

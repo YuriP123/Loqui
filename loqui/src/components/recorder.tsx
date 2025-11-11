@@ -4,10 +4,8 @@ import { useEffect, useRef, useState } from "react";
 
 export default function Recorder({
   onRecorded,
-  disabled = false,
 }: {
   onRecorded: (blob: Blob) => void;
-  disabled?: boolean;
 }) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [chunks, setChunks] = useState<BlobPart[]>([]);
@@ -34,7 +32,7 @@ export default function Recorder({
       };
       recorder.start();
       setRecording(true);
-    } catch {
+    } catch (e) {
       setError("Microphone access denied or not available.");
     }
   }
@@ -49,11 +47,8 @@ export default function Recorder({
     <div className="space-y-3">
       <button
         onClick={recording ? stop : start}
-        disabled={disabled}
         className={`w-full rounded-md px-4 py-3 text-white font-medium transition-all duration-300 ${
-          disabled
-            ? "bg-gray-400 cursor-not-allowed"
-            : recording 
+          recording 
             ? "bg-red-600 hover:bg-red-700 animate-pulse" 
             : "bg-primary hover:bg-primary/90"
         }`}

@@ -7,43 +7,26 @@ import ParticleFloorLanding from "@/components/ParticleFloor";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "next-themes";
 import { ArrowLeft } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { theme } = useTheme();
-  const { login, isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace("/home");
-    }
-  }, [isAuthenticated, router]);
-
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    setErrorMessage("");
-    
     try {
-      // Call login API using context
-      await login(username, password);
-      
-      // Login successful - redirect to home
+      await new Promise((r) => setTimeout(r, 600));
       router.replace("/home");
-    } catch (error: any) {
-      setErrorMessage(error.message || "Login failed. Please check your credentials.");
     } finally {
       setLoading(false);
     }
@@ -86,27 +69,15 @@ function SignInContent() {
           </div>
         )}
 
-        {errorMessage && (
-          <div className="mt-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50/80 dark:bg-red-900/20 p-3 text-sm text-red-800 dark:text-red-200 transition-all duration-500">
-            {errorMessage}
-          </div>
-        )}
-
-        {searchParams.get("expired") && (
-          <div className="mt-4 rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50/80 dark:bg-yellow-900/20 p-3 text-sm text-yellow-800 dark:text-yellow-200 transition-all duration-500">
-            Your session has expired. Please sign in again.
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
           <div className="text-left space-y-2">
-            <label className="block text-sm font-medium transition-colors duration-500">Username</label>
+            <label className="block text-sm font-medium transition-colors duration-500">Email</label>
             <Input
-              type="text"
+              type="email"
               isRequired
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="your username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               classNames={{
                 input: "bg-transparent transition-colors duration-500",
                 inputWrapper: "bg-gray-50/50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 transition-all duration-300",
