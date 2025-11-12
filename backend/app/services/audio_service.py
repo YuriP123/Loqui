@@ -7,6 +7,7 @@ from app.schemas.audio import AudioSampleCreate
 from app.utils.file_handler import save_upload_file, delete_file
 import wave
 import contextlib
+import os
 
 class AudioService:
     @staticmethod
@@ -100,13 +101,31 @@ class AudioService:
     
     @staticmethod
     def _get_audio_duration(file_path: str) -> Optional[float]:
-        """Get audio duration in seconds (works for WAV files)"""
+        """Get audio duration in seconds (supports WAV, WebM, OGG, MP3, etc.)"""
         try:
-            with contextlib.closing(wave.open(file_path, 'r')) as f:
-                frames = f.getnframes()
-                rate = f.getframerate()
-                duration = frames / float(rate)
+            # Try using pydub first (supports many formats)
+            try:
+                from pydub import AudioSegment
+                audio = AudioSegment.from_file(file_path)
+                duration = len(audio) / 1000.0  # pydub returns duration in milliseconds
                 return round(duration, 2)
+            except ImportError:
+                # pydub not available, fall back to wave for WAV files
+                pass
+            except Exception as e:
+                # pydub failed, try wave as fallback
+                pass
+            
+            # Fallback to wave library for WAV files
+            if file_path.lower().endswith('.wav'):
+                with contextlib.closing(wave.open(file_path, 'r')) as f:
+                    frames = f.getnframes()
+                    rate = f.getframerate()
+                    duration = frames / float(rate)
+                    return round(duration, 2)
+            
+            # If we can't determine duration, return None (will be set to 0 or estimated)
+            return None
         except Exception as e:
             print(f"Could not determine audio duration: {e}")
             return None
