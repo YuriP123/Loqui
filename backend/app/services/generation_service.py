@@ -131,25 +131,52 @@ class GenerationService:
         user: User
     ) -> bool:
         """Delete a generated audio"""
-        generation = GenerationService.get_generation_by_id(db, audio_id, user)
-        
-        # Don't allow deletion of processing items
-        if generation.status == GenerationStatus.PROCESSING:
+        try:
+            generation = GenerationService.get_generation_by_id(db, audio_id, user)
+            
+            # Don't allow deletion of processing items
+            if generation.status == GenerationStatus.PROCESSING:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot delete audio that is currently processing"
+                )
+            
+            # Delete file if exists (don't fail if file delete fails)
+            if generation.output_file_path:
+                try:
+                    from app.utils.file_handler import delete_file
+                    delete_file(generation.output_file_path)
+                    logger.info(f"Deleted file: {generation.output_file_path}")
+                except Exception as file_error:
+                    logger.warning(f"Failed to delete file {generation.output_file_path}: {file_error}")
+                    # Continue with database deletion even if file deletion fails
+            
+            # Explicitly delete queue item first (work around cascade issue)
+            from app.models.generation_queue import GenerationQueue
+            queue_item = db.query(GenerationQueue).filter(
+                GenerationQueue.audio_id == audio_id
+            ).first()
+            if queue_item:
+                db.delete(queue_item)
+                logger.info(f"Deleted queue item for generation {audio_id}")
+            
+            # Now delete the generation record
+            db.delete(generation)
+            db.commit()
+            logger.info(f"Successfully deleted generation {audio_id}")
+            
+            return True
+        except HTTPException:
+            # Re-raise HTTP exceptions (400, 404, etc.)
+            raise
+        except Exception as e:
+            logger.error(f"Error deleting generation {audio_id}: {str(e)}")
+            logger.exception(e)
+            db.rollback()
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot delete audio that is currently processing"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to delete generation: {str(e)}"
             )
-        
-        # Delete file if exists
-        if generation.output_file_path:
-            from app.utils.file_handler import delete_file
-            delete_file(generation.output_file_path)
-        
-        # Delete from database (cascade will delete queue item)
-        db.delete(generation)
-        db.commit()
-        
-        return True
     
     @staticmethod
     def get_generation_status(
