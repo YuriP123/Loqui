@@ -7,26 +7,52 @@ import ParticleFloorLanding from "@/components/ParticleFloor";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "next-themes";
 import { ArrowLeft } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
+import { ApiError } from "@/lib/api-client";
 
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { theme } = useTheme();
+  const { login, isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/home");
+    }
+  }, [isAuthenticated, router]);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
+    setError("");
+    
     try {
-      await new Promise((r) => setTimeout(r, 600));
-      router.replace("/home");
+      await login({ username, password });
+      // Router push is handled in the login function
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else if (err instanceof Error) {
+        // Handle network errors or other Error instances
+        if (err.message.includes('fetch') || err.message.includes('network')) {
+          setError("Cannot connect to server. Please make sure the backend is running on port 8000.");
+        } else {
+          setError(err.message || "An unexpected error occurred. Please try again.");
+        }
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -69,15 +95,21 @@ function SignInContent() {
           </div>
         )}
 
+        {error && (
+          <div className="mt-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50/80 dark:bg-red-900/20 p-3 text-sm text-red-800 dark:text-red-200 transition-all duration-500">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
           <div className="text-left space-y-2">
-            <label className="block text-sm font-medium transition-colors duration-500">Email</label>
+            <label className="block text-sm font-medium transition-colors duration-500">Username</label>
             <Input
-              type="email"
+              type="text"
               isRequired
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="username"
               classNames={{
                 input: "bg-transparent transition-colors duration-500",
                 inputWrapper: "bg-gray-50/50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 transition-all duration-300",
