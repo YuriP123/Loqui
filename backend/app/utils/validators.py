@@ -6,7 +6,7 @@ def validate_audio_file(file: UploadFile) -> bool:
     # Check file extension as fallback (useful when MIME type is not detected)
     if file.filename:
         ext = file.filename.lower().split('.')[-1]
-        valid_extensions = ['wav', 'mp3', 'mpeg']
+        valid_extensions = ['wav', 'mp3', 'mpeg', 'webm', 'ogg', 'm4a', 'mp4']
         if ext in valid_extensions:
             return True
     
@@ -14,13 +14,17 @@ def validate_audio_file(file: UploadFile) -> bool:
     if not file.content_type:
         raise HTTPException(
             status_code=400, 
-            detail="Could not determine file type. Please ensure file has .wav, .mp3, or .mpeg extension"
+            detail="Could not determine file type. Please ensure file has a valid audio extension (.wav, .mp3, .webm, .ogg, etc.)"
         )
     
-    if file.content_type not in settings.ALLOWED_AUDIO_FORMATS:
+    # Normalize MIME type (remove codecs parameter for comparison)
+    normalized_type = file.content_type.split(';')[0].strip()
+    allowed_types = [fmt.split(';')[0].strip() for fmt in settings.ALLOWED_AUDIO_FORMATS]
+    
+    if normalized_type not in allowed_types and file.content_type not in settings.ALLOWED_AUDIO_FORMATS:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid file format. Allowed formats: {', '.join(settings.ALLOWED_AUDIO_FORMATS)}"
+            detail=f"Invalid file format: {file.content_type}. Allowed formats: {', '.join(set(allowed_types))}"
         )
     
     return True

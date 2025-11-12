@@ -10,12 +10,16 @@ async def save_upload_file(file: UploadFile, folder: str) -> Tuple[str, str, int
     Save uploaded file to storage
     Returns: (file_path, file_name, file_size)
     """
-    # Validate file type
-    if file.content_type not in settings.ALLOWED_AUDIO_FORMATS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid file format. Allowed: {settings.ALLOWED_AUDIO_FORMATS}"
-        )
+    # Validate file type (normalize MIME type for comparison)
+    if file.content_type:
+        normalized_type = file.content_type.split(';')[0].strip()
+        allowed_types = [fmt.split(';')[0].strip() for fmt in settings.ALLOWED_AUDIO_FORMATS]
+        
+        if normalized_type not in allowed_types and file.content_type not in settings.ALLOWED_AUDIO_FORMATS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid file format: {file.content_type}. Allowed formats: {', '.join(set(allowed_types))}"
+            )
     
     # Generate unique filename
     file_extension = os.path.splitext(file.filename)[1]

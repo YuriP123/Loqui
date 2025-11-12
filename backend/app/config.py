@@ -28,7 +28,17 @@ class Settings(BaseSettings):
     # File Storage
     UPLOAD_DIR: str = "./app/storage"
     MAX_FILE_SIZE: int = 10485760  # 10MB
-    ALLOWED_AUDIO_FORMATS: list = ["audio/wav", "audio/mpeg", "audio/mp3"]
+    ALLOWED_AUDIO_FORMATS: list = [
+        "audio/wav", 
+        "audio/mpeg", 
+        "audio/mp3",
+        "audio/webm",
+        "audio/webm;codecs=opus",
+        "audio/ogg",
+        "audio/ogg;codecs=opus",
+        "audio/mp4",
+        "audio/m4a"
+    ]
     
     # CORS
     FRONTEND_URL: str = "http://localhost:3000"
