@@ -1,31 +1,115 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import GenerationCard, { type GenerationItem } from "@/components/generation-card";
 import { Sparkles, Upload } from "lucide-react";
+import * as generationApi from "@/lib/api/generation";
+import * as samplesApi from "@/lib/api/samples";
+import { API_BASE_URL } from "@/lib/api-client";
+import type { AudioSample, AudioSampleListResponse } from "@/lib/api-types";
+import { useAuth } from "@/contexts/auth-context";
+import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
+import { clearCache } from "@/lib/api-client";
+
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+  return date.toLocaleDateString();
+}
 
 export default function HomePage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const [recentGenerations, setRecentGenerations] = useState<GenerationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ totalSamples: 0, totalGenerations: 0 });
 
-  // Mock data - replace with actual data from backend
-  const recentGenerations: GenerationItem[] = [
-    {
-      id: "1",
-      title: "Welcome Message",
-      voiceSample: "My Voice Sample 1",
-      scriptPreview: "Welcome to Loqui! This is your first AI-generated voice narration...",
-      duration: "0:45",
-      generatedDate: "2 hours ago",
-      status: "completed",
-    },
-  ];
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch generations and samples (both are wrapped responses)
+      const [genResp, samplesResp] = await Promise.all([
+        generationApi.listGenerations(),
+        samplesApi.listSamples(),
+      ]);
+
+      const generationsData = (genResp as any).generations ?? [];
+      const samplesData = (samplesResp as AudioSampleListResponse).samples ?? [];
+
+      // Create a map of samples for quick lookup (keyed by sample_id)
+      const sampleMap = new Map(samplesData.map((s: AudioSample) => [s.sample_id, s]));
+
+      // Get the 3 most recent generations
+      const sortedGenerations = [...generationsData]
+        .sort(
+          (a: any, b: any) =>
+            new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime()
+        )
+        .slice(0, 3);
+
+      // Convert to GenerationItem format with backend field names
+      const items: GenerationItem[] = sortedGenerations.map((gen: any) => {
+        const sample = sampleMap.get(gen.sample_id);
+        const normalizedStatus: 'processing' | 'completed' | 'failed' =
+          gen.status === 'completed' ? 'completed' : gen.status === 'failed' ? 'failed' : 'processing';
+        return {
+          id: String(gen.audio_id),
+          title: gen.model_name,
+          voiceSample: sample?.sample_name || 'Unknown Sample',
+          scriptPreview:
+            gen.script_text.substring(0, 100) + (gen.script_text.length > 100 ? '...' : ''),
+          duration: gen.duration_seconds ? `${Math.floor(gen.duration_seconds / 60)}:${Math.floor(gen.duration_seconds % 60).toString().padStart(2, '0')}` : 'Unknown',
+          generatedDate: formatDate(gen.generated_at),
+          status: normalizedStatus,
+          audioUrl: gen.output_file_path ? `${API_BASE_URL}/api/library/download/generated/${gen.audio_id}` : undefined,
+        };
+      });
+
+      setRecentGenerations(items);
+      setStats({
+        totalSamples: samplesData.length,
+        totalGenerations: generationsData.length,
+      });
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+      toast.error("Failed to load data: " + getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   return (
     <div className="flex flex-1 flex-col h-screen overflow-hidden">
       {/* Header */}
       <header className="px-6 py-4 border-b bg-background">
-        <h1 className="text-2xl font-semibold transition-colors duration-500">Home</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold transition-colors duration-500">
+            Welcome back{user?.username ? `, ${user.username}` : ''}!
+          </h1>
+          <div className="flex gap-4 text-sm text-muted-foreground">
+            <span>{stats.totalSamples} voice samples</span>
+            <span>{stats.totalGenerations} generations</span>
+          </div>
+        </div>
       </header>
 
       {/* Main Content - Split View */}
@@ -36,15 +120,53 @@ export default function HomePage() {
             Recent Generations
           </h2>
           
-          {recentGenerations.length > 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+          ) : recentGenerations.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {recentGenerations.map((item) => (
                 <GenerationCard
                   key={item.id}
                   item={item}
-                  onPlay={(id) => console.log("Play", id)}
-                  onDownload={(id) => console.log("Download", id)}
-                  onDelete={(id) => console.log("Delete", id)}
+                  onPlay={(id) => {
+                    const gen = recentGenerations.find(g => g.id === id);
+                    if (gen?.audioUrl) window.open(gen.audioUrl, '_blank');
+                  }}
+                  onDownload={(id) => {
+                    const gen = recentGenerations.find(g => g.id === id);
+                    if (gen?.audioUrl) window.open(gen.audioUrl, '_blank');
+                  }}
+                  onDelete={async (id) => {
+                    if (confirm("Delete this generation?")) {
+                      // Optimistically remove from UI
+                      const generationToDelete = recentGenerations.find(g => g.id === id);
+                      setRecentGenerations(prev => prev.filter(g => g.id !== id));
+                      // Update stats optimistically
+                      setStats(prev => ({ ...prev, totalGenerations: Math.max(0, prev.totalGenerations - 1) }));
+                      
+                      try {
+                        await generationApi.deleteGeneration(parseInt(id));
+                        
+                        // Clear cache to ensure fresh data
+                        clearCache('/api/generation/');
+                        
+                        // Refresh data to ensure consistency
+                        await fetchData();
+                        
+                        toast.success("Generation deleted successfully");
+                      } catch (error: any) {
+                        console.error("Delete failed:", error);
+                        // Restore the item if deletion failed
+                        if (generationToDelete) {
+                          setRecentGenerations(prev => [...prev, generationToDelete]);
+                          setStats(prev => ({ ...prev, totalGenerations: prev.totalGenerations + 1 }));
+                        }
+                        toast.error(`Failed to delete: ${getErrorMessage(error)}`);
+                      }
+                    }
+                  }}
                 />
               ))}
             </div>

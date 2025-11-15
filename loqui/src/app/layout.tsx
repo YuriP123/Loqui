@@ -28,6 +28,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col`}
+        suppressHydrationWarning
       >
         <Providers>{children}</Providers>
       </body>

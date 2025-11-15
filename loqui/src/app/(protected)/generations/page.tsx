@@ -1,63 +1,95 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import GenerationCard, { type GenerationItem } from "@/components/generation-card";
+import AudioPlayer from "@/components/audio-player";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, Download, Trash2 } from "lucide-react";
+import { Search, Filter, Download, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
+import * as generationApi from "@/lib/api/generation";
+import * as samplesApi from "@/lib/api/samples";
+import { API_BASE_URL, apiDownload, clearCache } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/utils";
+import type { GeneratedAudio, AudioSample } from "@/lib/api-types";
+
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) === 1 ? '' : 's'} ago`;
+  return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) === 1 ? '' : 's'} ago`;
+}
 
 export default function GenerationsPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [generations, setGenerations] = useState<GenerationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [samplesMap, setSamplesMap] = useState<Map<number, AudioSample>>(new Map());
+  const [playingGeneration, setPlayingGeneration] = useState<GenerationItem | null>(null);
 
-  // Mock data - replace with actual data from backend
-  const generations: GenerationItem[] = [
-    {
-      id: "1",
-      title: "Welcome Message",
-      voiceSample: "My Voice Sample 1",
-      scriptPreview: "Welcome to Loqui! This is your AI-powered voice generation platform...",
-      duration: "0:45",
-      generatedDate: "2 hours ago",
-      status: "completed",
-    },
-    {
-      id: "2",
-      title: "Product Demo Script",
-      voiceSample: "Professional Voice",
-      scriptPreview: "In this demo, we'll show you how our revolutionary product works...",
-      duration: "2:15",
-      generatedDate: "1 day ago",
-      status: "completed",
-    },
-    {
-      id: "3",
-      title: "Tutorial Narration",
-      voiceSample: "My Voice Sample 1",
-      scriptPreview: "Step one: Open the application. Step two: Navigate to the settings...",
-      duration: "3:30",
-      generatedDate: "3 days ago",
-      status: "completed",
-    },
-    {
-      id: "4",
-      title: "Processing Audio",
-      voiceSample: "Professional Voice",
-      scriptPreview: "This generation is currently being processed...",
-      duration: "1:20",
-      generatedDate: "Just now",
-      status: "processing",
-    },
-    {
-      id: "5",
-      title: "Failed Generation",
-      voiceSample: "My Voice Sample 1",
-      scriptPreview: "This generation encountered an error and needs to be retried...",
-      duration: "0:00",
-      generatedDate: "5 days ago",
-      status: "failed",
-    },
-  ];
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch both generations and samples (both return wrapped responses)
+      const [genResp, samplesResp] = await Promise.all([
+        generationApi.listGenerations(),
+        samplesApi.listSamples(),
+      ]);
+
+      const generationsData = genResp.generations || [];
+      const samplesData = samplesResp.samples || [];
+
+      // Create a map of samples for quick lookup (keyed by sample_id)
+      const sampleMap = new Map(samplesData.map(s => [s.sample_id, s]));
+      setSamplesMap(sampleMap);
+
+      // Convert to GenerationItem format with backend field names
+      const items: GenerationItem[] = generationsData.map((gen: GeneratedAudio) => {
+        const sample = sampleMap.get(gen.sample_id);
+        const normalizedStatus: 'processing' | 'completed' | 'failed' =
+          gen.status === 'completed' ? 'completed' : gen.status === 'failed' ? 'failed' : 'processing';
+        
+        return {
+          id: gen.audio_id.toString(),
+          title: gen.model_name,
+          voiceSample: sample?.sample_name || 'Unknown Sample',
+          scriptPreview: gen.script_text.substring(0, 100) + (gen.script_text.length > 100 ? '...' : ''),
+          duration: gen.duration_seconds 
+            ? `${Math.floor(gen.duration_seconds / 60)}:${Math.floor(gen.duration_seconds % 60).toString().padStart(2, '0')}` 
+            : "Unknown",
+          generatedDate: formatDate(gen.generated_at),
+          status: normalizedStatus,
+          audioUrl: gen.output_file_path ? `${API_BASE_URL}/api/library/download/generated/${gen.audio_id}` : undefined,
+        };
+      });
+
+      setGenerations(items);
+    } catch (error) {
+      console.error("Failed to fetch generations:", error);
+      toast.error("Failed to load generations: " + getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const filteredGenerations = generations.filter((gen) =>
     gen.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -71,17 +103,151 @@ export default function GenerationsPage() {
     );
   };
 
-  const handleBulkDownload = () => {
-    console.log("Bulk download:", selectedItems);
-    alert("Downloading selected items...");
+  const handleBulkDownload = async () => {
+    const completedItems = selectedItems.filter(id => {
+      const gen = generations.find(g => g.id === id);
+      return gen?.status === 'completed' && gen?.audioUrl;
+    });
+
+    if (completedItems.length === 0) {
+      toast.error("No completed generations to download");
+      return;
+    }
+
+    // Download each file with authentication
+    for (const id of completedItems) {
+      try {
+        const blob = await apiDownload(`/api/library/download/generated/${id}`);
+        const url = URL.createObjectURL(blob);
+        const gen = generations.find(g => g.id === id);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${gen?.title || 'generated'}.wav`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        // Small delay between downloads
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error(`Failed to download ${id}:`, error);
+      }
+    }
+    toast.success(`Downloading ${completedItems.length} file${completedItems.length === 1 ? '' : 's'}`);
   };
 
-  const handleBulkDelete = () => {
-    console.log("Bulk delete:", selectedItems);
-    if (confirm(`Delete ${selectedItems.length} selected items?`)) {
-      setSelectedItems([]);
-      alert("Items deleted");
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedItems.length} selected generation${selectedItems.length === 1 ? '' : 's'}?`)) {
+      return;
     }
+
+    // Optimistically remove from UI
+    const itemsToDelete = generations.filter(g => selectedItems.includes(g.id));
+    setGenerations(prev => prev.filter(g => !selectedItems.includes(g.id)));
+    const previousSelected = [...selectedItems];
+    setSelectedItems([]);
+
+    try {
+      console.log("Bulk deleting:", previousSelected);
+      const results = await Promise.allSettled(
+        previousSelected.map(id => generationApi.deleteGeneration(parseInt(id)))
+      );
+      
+      const failed = results.filter(r => r.status === 'rejected');
+      if (failed.length > 0) {
+        console.error("Some deletes failed:", failed);
+        // Restore failed items
+        const failedIds = previousSelected.filter((id, index) => results[index].status === 'rejected');
+        const failedItems = itemsToDelete.filter(item => failedIds.includes(item.id));
+        setGenerations(prev => [...prev, ...failedItems]);
+        setSelectedItems(failedIds);
+        toast.error(`Failed to delete ${failed.length} out of ${previousSelected.length} items`);
+      } else {
+        console.log("All deletes successful");
+        toast.success(`Deleted ${previousSelected.length} generation${previousSelected.length === 1 ? '' : 's'}`);
+      }
+      
+      // Clear cache to ensure fresh data
+      clearCache('/api/generation/');
+      
+      // Refresh the list to ensure consistency
+      await fetchData();
+    } catch (error: any) {
+      console.error("Bulk delete failed:", error);
+      // Restore all items if bulk delete failed
+      setGenerations(prev => [...prev, ...itemsToDelete]);
+      setSelectedItems(previousSelected);
+      toast.error(`Failed to delete: ${getErrorMessage(error)}`);
+    }
+  };
+
+  const handlePlay = (id: string) => {
+    const gen = generations.find(g => g.id === id);
+    if (gen?.audioUrl) {
+      setPlayingGeneration(gen);
+    }
+  };
+
+  const handleDownload = async (id: string) => {
+    const gen = generations.find(g => g.id === id);
+    if (!gen?.audioUrl) {
+      toast.error("Audio file not available");
+      return;
+    }
+
+    try {
+      const blob = await apiDownload(`/api/library/download/generated/${id}`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${gen.title || 'generated'}.wav`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Download started");
+    } catch (error) {
+      toast.error("Failed to download: " + getErrorMessage(error));
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this generation?")) {
+      return;
+    }
+
+    // Optimistically remove from UI
+    const generationToDelete = generations.find(g => g.id === id);
+    setGenerations(prev => prev.filter(g => g.id !== id));
+
+    try {
+      console.log("Deleting generation:", id);
+      await generationApi.deleteGeneration(parseInt(id));
+      
+      // Clear cache to ensure fresh data
+      clearCache('/api/generation/');
+      
+      // Refresh the list to ensure consistency
+      await fetchData();
+      
+      toast.success("Generation deleted successfully");
+    } catch (error: any) {
+      console.error("Delete failed:", error);
+      console.error("Error details:", error.message, error.status);
+      // Restore the item if deletion failed
+      if (generationToDelete) {
+        setGenerations(prev => [...prev, generationToDelete]);
+      }
+      toast.error(`Failed to delete generation: ${getErrorMessage(error)}`);
+    }
+  };
+
+  const handleRegenerate = async (id: string) => {
+    const gen = generations.find(g => g.id === id);
+    if (!gen) return;
+
+    // Navigate to lab with pre-filled data (you could implement this with query params)
+    router.push('/lab');
   };
 
   return (
@@ -157,7 +323,11 @@ export default function GenerationsPage() {
 
           {/* Generations List */}
           <div className="flex-1 overflow-auto">
-            {filteredGenerations.length > 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : filteredGenerations.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredGenerations.map((item) => (
                   <div
@@ -176,10 +346,10 @@ export default function GenerationsPage() {
                     </div>
                     <GenerationCard
                       item={item}
-                      onPlay={(id) => console.log("Play", id)}
-                      onDownload={(id) => console.log("Download", id)}
-                      onDelete={(id) => console.log("Delete", id)}
-                      onRegenerate={(id) => console.log("Regenerate", id)}
+                      onPlay={handlePlay}
+                      onDownload={handleDownload}
+                      onDelete={handleDelete}
+                      onRegenerate={handleRegenerate}
                     />
                   </div>
                 ))}
@@ -216,6 +386,48 @@ export default function GenerationsPage() {
           )}
         </div>
       </main>
+
+      {/* Audio Player Modal */}
+      {playingGeneration && playingGeneration.audioUrl && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg shadow-xl max-w-2xl w-full p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold transition-colors duration-500">
+                {playingGeneration.title}
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPlayingGeneration(null)}
+                className="transition-all duration-300"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <AudioPlayer
+              audioUrl={playingGeneration.audioUrl}
+              title={playingGeneration.title}
+              key={`play-${playingGeneration.id}`}
+              onDownload={async () => {
+                try {
+                  const blob = await apiDownload(`/api/library/download/generated/${playingGeneration.id}`);
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${playingGeneration.title || 'generated'}.wav`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  toast.success("Download started");
+                } catch (error) {
+                  toast.error("Failed to download: " + getErrorMessage(error));
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

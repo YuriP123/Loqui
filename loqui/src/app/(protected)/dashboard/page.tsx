@@ -7,15 +7,10 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to home page
+    // Redirect to home page immediately
     router.replace("/home");
   }, [router]);
 
-  return (
-    <div className="flex items-center justify-center h-screen">
-      <p className="text-muted-foreground transition-colors duration-500">
-        Redirecting...
-      </p>
-    </div>
-  );
+  // Return null to avoid rendering anything during redirect
+  return null;
 }

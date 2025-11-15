@@ -1,7 +1,14 @@
 "use client";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 export default function Footer() {
+  const [year, setYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setYear(new Date().getFullYear());
+  }, []);
+
   return (
     <footer className="h-screen snap-start flex flex-col justify-center items-center border-t transition-colors duration-500">
       <div className="mx-auto max-w-6xl px-6 py-10 rounded-xl bg-gray-100/90 dark:bg-gray-900/90 backdrop-blur-md shadow-lg border border-gray-200 dark:border-gray-800 transition-all duration-500">
@@ -31,7 +38,7 @@ export default function Footer() {
             </ul>
           </div>
         </div>
-        <div className="text-center text-xs text-muted-foreground pt-6 pb-2 transition-colors duration-500">© {new Date().getFullYear()} Loqui</div>
+        <div className="text-center text-xs text-muted-foreground pt-6 pb-2 transition-colors duration-500">© {year || 2025} Loqui</div>
       </div>
     </footer>
   );
